@@ -1,16 +1,16 @@
-from django.db import models
+import django.db.models
 
-from django.db.models import Sum
-
-from decimal import Decimal 
-"""classes are generally initCap"""
 import calc
 
 
-class Team(models.Model):
-    created_on = models.DateTimeField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True)
-    name = models.CharField(max_length=150, db_index=True)
+class Team(django.db.models.Model):
+    created_on = django.db.models.DateTimeField(auto_now_add=True)
+    updated_on = django.db.models.DateTimeField(auto_now=True)
+    name = django.db.models.CharField(max_length=150, db_index=True)
+    
+
+    def record(self):
+        return self.name
 
 
     def __unicode__(self):
@@ -21,12 +21,12 @@ class Team(models.Model):
         pass
 
 
-class Player(models.Model):
-    created_on = models.DateTimeField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True)
-    name = models.CharField(max_length=150, unique=True)
-    number = models.PositiveIntegerField()
-    team = models.ForeignKey('Team', related_name='players')
+class Player(django.db.models.Model):
+    created_on = django.db.models.DateTimeField(auto_now_add=True)
+    updated_on = django.db.models.DateTimeField(auto_now=True)
+    name = django.db.models.CharField(max_length=150, unique=True)
+    number = django.db.models.PositiveIntegerField()
+    team = django.db.models.ForeignKey('Team', related_name='players')
 
     class Meta:
         ordering = ["name", ]
@@ -36,202 +36,219 @@ class Player(models.Model):
                                         self.number or 'N/A',
                                         self.team.name)
 
-    @property
+
+    def at_bats(self):
+        """
+Returns the total number of at_bats for this player
+"""
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('at_bats'))['s'] or 0
+    at_bats.short_description = u'AB'
+
+
     def hits(self):
+        """
+Returns the total singles, doubles, triples, and home_runs
+"""
         return sum(filter(None,
             self.statistics.aggregate(django.db.models.Sum('singles'),
                                       django.db.models.Sum('doubles'),
                                       django.db.models.Sum('triples'),
-                                      django.db.models.Sum('home_runs'),)))
-#filter:pass in a method (i.e. None; x > 5; etc) and it will pass the values in to the method
-#to determine whether you want to keep particular value
-#will explicitly remove all "None's" from the list, in this case
-
-        """
-Returns the total hits, doubles, triples, and home_runs
-"""
-        pass
+                                      django.db.models.Sum('home_runs')
+            ).values()))
+    hits.short_description = u'H'
 
 
-    @property
     def walks(self):
         """
 Returns the total number of walks for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('walks'))['s'] or 0
+    walks.short_description = u'BB'
 
 
-    @property
-    def runs(self):
-       # return self.statistics.values_list('runs', 'hits') #flat=True x tupples
-        #return sum(self.statistics.values_list('runs'))
-        # return self.statistics.aggregate(Sum('runs')) (gives a dictionary)
-        #return self.statistics.aggregate(s=Sum('runs'))
-        #will return dictionary as {'s':123}
-        return self.statistics.aggregate(s=Sum('runs'))['s'] or 0 #gives an integer
-
+    def strikeouts(self):
         """
-Returns the total number of walks for this player
-***RELATED_NAME provides reverse relationship on a table
-***so for player, we can look at the Statistic table, where 
-   the related_name is 'statistics'
+Returns the total number of strikeouts for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('strikeouts'))['s'] or 0
+    strikeouts.short_description = u'K'
+
+
+    def runs(self):
+        """
+Returns the total number of runs for this player
+"""
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('runs'))['s'] or 0
+    runs.short_description = u'R'
 
 
     def singles(self):
-        return self.statistics.aggregate(s=Sum('singles'))['s'] or 0      
         """
-Returns the total number of walks for this player
+Returns the total number of singles for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('singles'))['s'] or 0
+    singles.short_description = u'1B'
 
 
-    @property
-    def at_bats(self):
-        """
-Returns the total number of walks for this player
-"""
-        pass
-
-
-    @property
     def doubles(self):
         """
-Returns the total number of walks for this player
+Returns the total number of doubled for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('doubles'))['s'] or 0
+    doubles.short_description = u'2B'
 
 
-    @property
     def triples(self):
         """
-Returns the total number of walks for this player
+Returns the total number of triples for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('triples'))['s'] or 0
+    triples.short_description = u'3B'
 
 
-    @property
     def home_runs(self):
         """
 Returns the total number of home runs for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('home_runs'))['s'] or 0
+    home_runs.short_description = u'HR'
 
 
-    @property
     def rbis(self):
         """
 Returns the total number of rbis for this player
 """
-        pass
+        return self.statistics.aggregate(
+            s=django.db.models.Sum('rbis'))['s'] or 0
+    rbis.short_description = u'RBI'
 
 
-    @property
     def batting_average(self):
-        pass
+        if self.hits() > self.at_bats():
+            return 0
+        return calc.average(self.at_bats(), self.hits())
+    batting_average.short_description = u'AVG'
 
 
-    @property
     def on_base_percentage(self):
-        pass
+        if self.hits() > self.at_bats():
+            return 0
+        return calc.on_base_percentage(
+            self.at_bats(), self.walks(), self.hits())
+    on_base_percentage.short_description = u'OB%'
 
-    @property
     def slugging_percentage(self):
-        pass
+        if self.hits() > self.at_bats():
+            return 0
+        return calc.slugging_percentage(self.at_bats(), self.singles(),
+                                        self.doubles(), self.triples(),
+                                        self.home_runs())
+    slugging_percentage.short_description = u'SLG%'
 
 
-class Game(models.Model):
-    created_on = models.DateTimeField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True)
-    played_on = models.DateTimeField()
-    location = models.CharField(max_length=150)
-    home_roster = models.OneToOneField('Roster', related_name='home_game')
-    away_roster = models.OneToOneField('Roster', related_name='away_game')
+class Game(django.db.models.Model):
+    created_on = django.db.models.DateTimeField(auto_now_add=True)
+    updated_on = django.db.models.DateTimeField(auto_now=True)
+    played_on = django.db.models.DateTimeField()
+    location = django.db.models.CharField(max_length=150)
+    home_roster = django.db.models.OneToOneField('Roster',
+                                                 related_name='home_game')
+    away_roster = django.db.models.OneToOneField('Roster',
+                                                 related_name='away_game')
 
 
     def __unicode__(self):
         return u'{0} - {1}'.format(self.location, self.played_on)
 
 
-    @property
+
     def winner(self):
-        pass
+        if self.away_score > self.home_score:
+            return self.away_roster.team
+        else:
+            return self.home_roster.team
 
 
-    @property
+
     def final_score(self):
         """
 Returns the final score of the game, as recorded in the rosters, as a
 tuple (away_score, home_score)
 """
-        pass
+        return self.away_score, self.home_score
 
 
-    @property
+
     def home_score(self):
         """
 Returns the score of the home team, as recorded in the home roster
 """
-        pass
+        return self.home_roster.player_statistics.aggregate(
+            s=django.db.models.Sum('runs'))['s'] or 0
 
 
-    @property
+
     def away_score(self):
         """
 Returns the score of the home team, as recorded in the home roster
 """
-        pass
+        return self.away_roster.player_statistics.aggregate(
+            s=django.db.models.Sum('runs'))['s'] or 0
 
 
-class Roster(models.Model):
-    created_on = models.DateTimeField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True)
-    team = models.ForeignKey('Team', related_name='rosters')
+class Roster(django.db.models.Model):
+    created_on = django.db.models.DateTimeField(auto_now_add=True)
+    updated_on = django.db.models.DateTimeField(auto_now=True)
+    team = django.db.models.ForeignKey('Team', related_name='rosters')
 
 
     def __unicode__(self):
         return '{0} - {1}'.format(self.team.name, self.id)
 
 
-class Statistic(models.Model):
-    created_on = models.DateTimeField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True)
-    player = models.OneToOneField('Player', related_name='statistics')
-    at_bats = models.PositiveIntegerField(default=0)
-    runs = models.PositiveIntegerField(default=0)
-    singles = models.PositiveIntegerField(default=0)
-    doubles = models.PositiveIntegerField(default=0)
-    triples = models.PositiveIntegerField(default=0)
-    home_runs = models.PositiveIntegerField(default=0)
-    rbis = models.PositiveIntegerField(default=0)
-    walks = models.PositiveIntegerField(default=0)
-    roster = models.ForeignKey('Roster', related_name='player_statistics')
+class Statistic(django.db.models.Model):
+    created_on = django.db.models.DateTimeField(auto_now_add=True)
+    updated_on = django.db.models.DateTimeField(auto_now=True)
+    player = django.db.models.ForeignKey('Player', related_name='statistics')
+    at_bats = django.db.models.PositiveIntegerField(u'AB', default=0)
+    runs = django.db.models.PositiveIntegerField('R', default=0)
+    singles = django.db.models.PositiveIntegerField('1B', default=0)
+    doubles = django.db.models.PositiveIntegerField('2B', default=0)
+    triples = django.db.models.PositiveIntegerField('3B', default=0)
+    home_runs = django.db.models.PositiveIntegerField('HR', default=0)
+    rbis = django.db.models.PositiveIntegerField('RBI', default=0)
+    walks = django.db.models.PositiveIntegerField('BB', default=0)
+    strikeouts = django.db.models.PositiveIntegerField('K', default=0)
+    roster = django.db.models.ForeignKey('Roster',
+                                         related_name='player_statistics')
 
 
     def __unicode__(self):
-        return u'{0} - {1}'.format(self.player.name, self.roster)
+        return u'{name} ({roster_id}): AB:{at_bats} R:{runs} 1B:{singles} ' \
+               u'2B:{doubles} 3B:{triples} HR:{home_runs} RBI:{rbis} ' \
+               u'BB:{walks} K:{strikeouts}'.format(
+            name=self.player.name, roster_id=self.roster_id,
+            at_bats=self.at_bats, runs=self.runs, singles=self.singles,
+            doubles=self.doubles, triples=self.triples,
+            home_runs=self.home_runs, walks=self.walks,
+            strikeouts=self.strikeouts, rbis=self.rbis)
 
 
-    @property
+
     def hits(self):
         return self.singles + self.doubles + self.triples + self.home_runs
 
 
-    @property
+
     def batting_average(self):
-        if self.at_bats == 0:
-            return Decimal("0")
-        return Decimal(self.hits()) / Decimal(self.at_bats)
-        """return self.hits() / float(self.at_bats)
-       Must add "float" or "Decimal" before so the value doesn't get rounded
-        """
-        """
-        if self.at_bats > 0:
-           return Decimal(self.hits()) / Decimal(self.at_bats)
-            else:
-                -or raise Exception("No division by zero!")
-                return Decimal("0")
-                - implicit return none for any method
-            """
-       
+        if self.hits > self.at_bats:
+            return 0
+        return calc.average(self.at_bats, self.hits)
