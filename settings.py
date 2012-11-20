@@ -29,9 +29,9 @@ USE_TZ = True
 
 MEDIA_ROOT = os.path.join(PROJECT_PATH, 'media')
 MEDIA_URL = '/media/'
-STATIC_ROOT = os.path.join(PROJECT_PATH, 'static')
+STATIC_ROOT = os.path.join(PROJECT_PATH, 'static-collected')
 STATIC_URL = '/static/'
-STATICFILES_DIRS = ()
+STATICFILES_DIRS = (os.path.join(PROJECT_PATH, 'static'),)
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -54,7 +54,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'project.urls'
+ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = (os.path.join(PROJECT_PATH, 'templates'),)
 
@@ -66,7 +66,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.admin',
-    'project'
+    'project',
+    'softball',
 )
 
 LOGGING = {
