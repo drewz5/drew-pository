@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <p>To contact us, please fill out the form below.</p>
+
+    <form action="" method="post">
+     <!-- {% csrf_token %}-->
+     {% include "include_form.html" %}
+     <!-- {{ form.as_p }}-->
+      <p><button type="submit">Send Message</button></p>
+    </form>
+{% endblock %}
